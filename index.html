@@ -1,0 +1,34 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Donate | Raj Sarang</title>
+<style>
+body{font-family:Arial;margin:0;background:#f5f7ff;color:#182033}.wrap{max-width:900px;margin:auto;padding:35px 18px}
+.card{background:#fff;padding:28px;border-radius:20px;box-shadow:0 10px 35px #0001;margin-bottom:22px}h1{color:#6336c7;text-align:center}
+.qr{width:min(100%,420px);display:block;margin:15px auto}.upi{text-align:center;font-weight:bold}.btn{padding:13px 18px;border:0;border-radius:9px;background:#6336c7;color:#fff;font-weight:bold;cursor:pointer;margin:5px}
+label{display:block;font-weight:bold;margin:12px 0 5px}input,select{width:100%;padding:12px;border:1px solid #ccd2df;border-radius:8px;box-sizing:border-box}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:14px}.msg{margin-top:15px;padding:14px;background:#fff7df;border-radius:9px}
+@media(max-width:650px){.row{grid-template-columns:1fr}}
+</style></head><body><div class="wrap">
+<div class="card"><h1>Support Our Cause</h1><p style="text-align:center">Scan the official QR code and make your donation.</p>
+<img class="qr" src="donation-qr.png" alt="Official UPI QR"><p class="upi">UPI ID: rajsarang1820@okaxis</p>
+<div style="text-align:center"><button class="btn" onclick="copyUPI()">Copy UPI ID</button>
+<a class="btn" style="text-decoration:none" href="upi://pay?pa=rajsarang1820@okaxis&pn=Raj%20Sarang">Open UPI App</a></div></div>
+
+<div class="card"><h2>After Payment</h2><form id="f">
+<div class="row"><div><label>Name</label><input id="name" required></div><div><label>Mobile</label><input id="mobile" pattern="[0-9]{10}" required></div></div>
+<div class="row"><div><label>Email</label><input id="email" type="email" required></div><div><label>Amount ₹</label><input id="amount" type="number" min="1" required></div></div>
+<label>Purpose</label><select id="purpose" required><option value="">Select</option><option>General Donation</option><option>Education</option><option>Healthcare</option><option>Community Support</option><option>Other</option></select>
+<label>UPI Transaction ID / UTR</label><input id="utr" required>
+<label>Payment Date</label><input id="paymentDate" type="date" required>
+<button class="btn" type="submit">Submit Payment Details</button>
+<div class="msg">Your submission will first be <b>PENDING VERIFICATION</b>. The admin checks the UTR/payment. After verification, a confirmation message is sent to your email and your certificate becomes available.</div>
+</form><p id="result"></p></div>
+</div>
+<script>
+function copyUPI(){navigator.clipboard.writeText("rajsarang1820@okaxis").then(()=>alert("UPI ID copied"))}
+document.getElementById("f").onsubmit=async e=>{
+e.preventDefault();let b={name:name.value,email:email.value,mobile:mobile.value,amount:amount.value,purpose:purpose.value,utr:utr.value,paymentDate:paymentDate.value};
+let r=await fetch("/api/donations",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(b)}),d=await r.json();
+document.getElementById("result").innerHTML=r.ok?`<b>Submitted!</b><br>Donation ID: ${d.donationId}<br>Status: PENDING VERIFICATION`:d.error;
+};
+</script></body></html>
