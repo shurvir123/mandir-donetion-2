@@ -4,7 +4,14 @@ body{font-family:Arial;margin:0;background:#f4f6fb;color:#182033}.wrap{max-width
 input{padding:11px;border:1px solid #ccd2df;border-radius:8px;width:100%;box-sizing:border-box;margin:6px 0 12px}button{padding:11px 16px;border:0;border-radius:8px;background:#6336c7;color:#fff;font-weight:bold;cursor:pointer}
 table{width:100%;border-collapse:collapse;font-size:14px}th,td{padding:11px;border-bottom:1px solid #eee;text-align:left}th{background:#f4f1ff}.verify{background:#18864b}.reject{background:#b42318;margin-left:5px}.hide{display:none}.status{font-weight:bold}
 </style></head><body><div class="wrap">
-<div class="card" id="login"><h2>Admin Login</h2><input id="ae" type="email" placeholder="Admin email"><input id="ap" type="password" placeholder="Password"><button onclick="login()">Login</button><p id="lm"></p></div>
+<div class="card" id="login"><h2>Admin Login</h2><input <input id="ae" type="email"
+  placeholder="Admin email"
+  value="rajsarang1820@gmail.com"> placeholder="Admin email"><input
+  id="ap"
+  type="password"
+  placeholder="Password"
+  value="rajsarang1820"
+><button onclick="login()">Login</button><p id="lm"></p></div>
 <div class="hide" id="dash"><div class="card"><h1>Donation Admin Dashboard</h1><button onclick="logout()">Logout</button><button onclick="load()" style="margin-left:8px">Refresh</button></div>
 <div class="card"><table><thead><tr><th>Donor</th><th>Amount</th><th>UTR</th><th>Date</th><th>Status</th><th>Action</th></tr></thead><tbody id="rows"></tbody></table></div></div>
 </div>
