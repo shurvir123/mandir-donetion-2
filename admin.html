@@ -1,26 +1,375 @@
-<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Admin Dashboard</title><style>
-body{font-family:Arial;margin:0;background:#f4f6fb;color:#182033}.wrap{max-width:1200px;margin:auto;padding:30px 18px}.card{background:#fff;padding:24px;border-radius:16px;box-shadow:0 8px 25px #0001;margin-bottom:20px}
-input{padding:11px;border:1px solid #ccd2df;border-radius:8px;width:100%;box-sizing:border-box;margin:6px 0 12px}button{padding:11px 16px;border:0;border-radius:8px;background:#6336c7;color:#fff;font-weight:bold;cursor:pointer}
-table{width:100%;border-collapse:collapse;font-size:14px}th,td{padding:11px;border-bottom:1px solid #eee;text-align:left}th{background:#f4f1ff}.verify{background:#18864b}.reject{background:#b42318;margin-left:5px}.hide{display:none}.status{font-weight:bold}
-</style></head><body><div class="wrap">
-<div class="card" id="login"><h2>Admin Login</h2><input <input id="ae" type="email"
-  placeholder="Admin email"
-  value="rajsarang1820@gmail.com"> placeholder="Admin email"><input
-  id="ap"
-  type="password"
-  placeholder="Password"
-  value="rajsarang1820"
-><button onclick="login()">Login</button><p id="lm"></p></div>
-<div class="hide" id="dash"><div class="card"><h1>Donation Admin Dashboard</h1><button onclick="logout()">Logout</button><button onclick="load()" style="margin-left:8px">Refresh</button></div>
-<div class="card"><table><thead><tr><th>Donor</th><th>Amount</th><th>UTR</th><th>Date</th><th>Status</th><th>Action</th></tr></thead><tbody id="rows"></tbody></table></div></div>
-</div>
-<script>
-async function login(){let r=await fetch("/api/admin/login",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email:ae.value,password:ap.value})});let d=await r.json();if(r.ok){loginEl.classList.add("hide");dash.classList.remove("hide");load()}else lm.textContent=d.error}
-const loginEl=document.getElementById("login");
-async function load(){let r=await fetch("/api/admin/donations");if(r.status===401)return;let a=await r.json();rows.innerHTML=a.map(d=>`<tr><td>${esc(d.donor_name)}<br>${esc(d.email)}</td><td>₹${d.amount}</td><td>${esc(d.utr)}</td><td>${d.payment_date}</td><td class="status">${d.status}</td><td>${d.status==="PENDING VERIFICATION"?`<button class="verify" onclick="verify(${d.id})">Verify Payment</button><button class="reject" onclick="rejectD(${d.id})">Reject</button>`:d.certificate_number||"-"}</td></tr>`).join("")}
-async function verify(id){if(!confirm("Confirm that you checked this UTR/payment and it is genuine?"))return;let r=await fetch("/api/admin/donations/"+id+"/verify",{method:"POST"});let d=await r.json();alert(d.message);load()}
-async function rejectD(id){if(!confirm("Reject this payment?"))return;await fetch("/api/admin/donations/"+id+"/reject",{method:"POST"});load()}
-async function logout(){await fetch("/api/admin/logout",{method:"POST"});location.reload()}
-function esc(s){return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]))}
-</script></body></html>
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Donation Admin Dashboard</title>
+
+  <style>
+    * { box-sizing: border-box; }
+
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      background: #f4f6fb;
+      color: #182033;
+    }
+
+    .wrap {
+      max-width: 1200px;
+      margin: auto;
+      padding: 24px 16px;
+    }
+
+    .card {
+      background: #fff;
+      padding: 22px;
+      border-radius: 14px;
+      box-shadow: 0 8px 25px #0001;
+      margin-bottom: 20px;
+    }
+
+    input {
+      display: block;
+      width: 100%;
+      padding: 12px;
+      border: 1px solid #ccd2df;
+      border-radius: 8px;
+      margin: 8px 0 14px;
+    }
+
+    button {
+      padding: 10px 14px;
+      border: 0;
+      border-radius: 8px;
+      background: #6336c7;
+      color: white;
+      font-weight: bold;
+      cursor: pointer;
+      margin: 3px;
+    }
+
+    button:disabled {
+      opacity: .6;
+      cursor: wait;
+    }
+
+    .verify { background: #18864b; }
+    .reject { background: #b42318; }
+    .certificate { background: #1769aa; }
+    .hide { display: none !important; }
+
+    .message {
+      overflow-wrap: anywhere;
+      color: #b42318;
+    }
+
+    .table-wrap { overflow-x: auto; }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 14px;
+      min-width: 850px;
+    }
+
+    th, td {
+      padding: 12px;
+      border-bottom: 1px solid #eee;
+      text-align: left;
+    }
+
+    th { background: #f4f1ff; }
+    .status { font-weight: bold; }
+    .topbar { display: flex; gap: 8px; flex-wrap: wrap; }
+  </style>
+</head>
+
+<body>
+  <main class="wrap">
+
+    <section class="card" id="login">
+      <h2>Admin Login</h2>
+
+      <form id="loginForm">
+        <label for="ae">Admin Email</label>
+        <input
+          id="ae"
+          type="email"
+          placeholder="Admin email"
+          autocomplete="username"
+          required
+        >
+
+        <label for="ap">Password</label>
+        <input
+          id="ap"
+          type="password"
+          placeholder="Password"
+          autocomplete="current-password"
+          required
+        >
+
+        <button id="loginBtn" type="submit">Login</button>
+      </form>
+
+      <p id="lm" class="message" role="status"></p>
+    </section>
+
+    <section id="dash" class="hide">
+      <div class="card">
+        <h1>Donation Admin Dashboard</h1>
+
+        <div class="topbar">
+          <button id="refreshBtn" type="button">Refresh Donations</button>
+          <button id="logoutBtn" type="button">Logout</button>
+        </div>
+
+        <p id="dashboardMessage" role="status"></p>
+      </div>
+
+      <div class="card">
+        <h2>Donation List</h2>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Donor</th>
+                <th>Amount</th>
+                <th>UTR</th>
+                <th>Date</th>
+                <th>Status</th>
+                <th>Certificate</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody id="rows">
+              <tr>
+                <td colspan="7">Login to view donations.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const loginEl = document.getElementById("login");
+    const dash = document.getElementById("dash");
+    const loginForm = document.getElementById("loginForm");
+    const loginBtn = document.getElementById("loginBtn");
+    const emailInput = document.getElementById("ae");
+    const passwordInput = document.getElementById("ap");
+    const loginMessage = document.getElementById("lm");
+    const dashboardMessage =
+      document.getElementById("dashboardMessage");
+    const rows = document.getElementById("rows");
+
+    let busy = false;
+
+    function escapeHTML(value) {
+      return String(value ?? "").replace(/[&<>"']/g, char => ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#039;"
+      })[char]);
+    }
+
+    async function api(url, options = {}) {
+      const response = await fetch(url, {
+        credentials: "same-origin",
+        ...options,
+        headers: {
+          ...(options.headers || {})
+        }
+      });
+
+      if (response.status === 401) {
+        showLogin("Session expired. Please log in again.");
+        throw new Error("Admin authentication required.");
+      }
+
+      const data = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        throw new Error(data.error || data.message ||
+          "Request failed. Please try again.");
+      }
+
+      return data;
+    }
+
+    function showLogin(message = "") {
+      loginEl.classList.remove("hide");
+      dash.classList.add("hide");
+      loginMessage.textContent = message;
+      rows.replaceChildren();
+    }
+
+    function showDashboard() {
+      loginEl.classList.add("hide");
+      dash.classList.remove("hide");
+      loginMessage.textContent = "";
+    }
+
+    loginForm.addEventListener("submit", async event => {
+      event.preventDefault();
+
+      if (busy) return;
+      busy = true;
+      loginBtn.disabled = true;
+      loginMessage.textContent = "Logging in...";
+
+      try {
+        await api("/api/admin/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            email: emailInput.value.trim(),
+            password: passwordInput.value
+          })
+        });
+
+        passwordInput.value = "";
+        showDashboard();
+        await loadDonations();
+      } catch (error) {
+        loginMessage.textContent = error.message;
+      } finally {
+        busy = false;
+        loginBtn.disabled = false;
+      }
+    });
+
+    async function loadDonations() {
+      dashboardMessage.textContent = "Loading donations...";
+      rows.innerHTML =
+        '<tr><td colspan="7">Loading...</td></tr>';
+
+      try {
+        const donations = await api("/api/admin/donations");
+
+        if (!Array.isArray(donations)) {
+          throw new Error("Invalid donation list response.");
+        }
+
+        rows.innerHTML = donations.map(d => {
+          const id = Number(d.id);
+
+          // Do not render actions for invalid IDs.
+          const validId = Number.isSafeInteger(id) && id > 0;
+          const status = String(d.status ?? "");
+          const pending = status === "PENDING VERIFICATION";
+          const verified = status === "VERIFIED";
+          const certificateNumber =
+            String(d.certificate_number ?? "");
+
+          let actions = "-";
+
+          if (validId && pending) {
+            actions = `
+              <button class="verify"
+                data-action="verify" data-id="${id}">
+                Verify Payment
+              </button>
+              <button class="reject"
+                data-action="reject" data-id="${id}">
+                Reject
+              </button>`;
+          } else if (validId && verified &&
+                     !certificateNumber) {
+            actions = `
+              <button class="certificate"
+                data-action="certificate" data-id="${id}">
+                Confirm Certificate
+              </button>`;
+          }
+
+          return `
+            <tr>
+              <td>
+                ${escapeHTML(d.donor_name)}
+                <br>
+                ${escapeHTML(d.email)}
+              </td>
+              <td>₹${escapeHTML(d.amount)}</td>
+              <td>${escapeHTML(d.utr)}</td>
+              <td>${escapeHTML(d.payment_date)}</td>
+              <td class="status">${escapeHTML(status)}</td>
+              <td>${escapeHTML(certificateNumber || "-")}</td>
+              <td>${actions}</td>
+            </tr>`;
+        }).join("");
+
+        dashboardMessage.textContent =
+          `Total donations: ${donations.length}`;
+      } catch (error) {
+        dashboardMessage.textContent = error.message;
+        rows.innerHTML =
+          '<tr><td colspan="7">Could not load donations.</td></tr>';
+      }
+    }
+
+    rows.addEventListener("click", async event => {
+      const button = event.target.closest("button[data-action]");
+      if (!button || busy) return;
+
+      const id = Number(button.dataset.id);
+      const action = button.dataset.action;
+
+      if (!Number.isSafeInteger(id) || id <= 0) return;
+
+      const messages = {
+        verify: "Have you checked the UTR and confirmed the payment is genuine?",
+        reject: "Are you sure you want to reject this donation?",
+        certificate: "Have you verified the donor details and confirmed that the certificate should be issued?"
+      };
+
+      if (!confirm(messages[action])) return;
+
+      const endpoints = {
+        verify: `/api/admin/donations/${id}/verify`,
+        reject: `/api/admin/donations/${id}/reject`,
+        certificate:
+          `/api/admin/donations/${id}/confirm-certificate`
+      };
+
+      busy = true;
+      button.disabled = true;
+
+      try {
+        const result = await api(endpoints[action], {
+          method: "POST"
+        });
+
+        dashboardMessage.textContent =
+          result.message || "Action completed successfully.";
+
+        await loadDonations();
+      } catch (error) {
+        dashboardMessage.textContent = error.message;
+      } finally {
+        busy = false;
+      }
+    });
+
+    document.getElementById("refreshBtn")
+      .addEventListener("click", loadDonations);
+
+    document.getElementById("logoutBtn")
+      .addEventListener("click", async () => {
+        try {
+          await api("/api/admin/logout", { method: "POST" });
+        } catch (_) {
+          // Reload to clear the dashboard from view.
+        }
+
+        location.reload();
+      });
+  </script>
+</body>
+</html>
